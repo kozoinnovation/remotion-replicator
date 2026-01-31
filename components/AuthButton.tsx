@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { LogIn, LogOut, User, Zap, Mail, Loader2 } from 'lucide-react'
+import { LogIn, LogOut, User, Zap, Loader2, Lock } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 const PLAN_LIMITS: Record<string, number> = {
@@ -15,27 +15,36 @@ const PLAN_LABELS: Record<string, string> = {
 }
 
 export function AuthButton() {
-  const { user, profile, loading, signInWithEmail, signOut } = useAuth()
-  const [showEmailInput, setShowEmailInput] = useState(false)
+  const { user, profile, loading, signUp, signIn, signOut } = useAuth()
+  const [showForm, setShowForm] = useState(false)
+  const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState('')
-  const [sending, setSending] = useState(false)
-  const [sent, setSent] = useState(false)
+  const [password, setPassword] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email) return
+    if (!email || !password) return
 
-    setSending(true)
+    setSubmitting(true)
     setError('')
+    setSuccess('')
 
     try {
-      await signInWithEmail(email)
-      setSent(true)
+      if (isSignUp) {
+        await signUp(email, password)
+        setSuccess('Account created! You can now sign in.')
+        setIsSignUp(false)
+        setPassword('')
+      } else {
+        await signIn(email, password)
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to send magic link')
+      setError(err.message || 'Authentication failed')
     } finally {
-      setSending(false)
+      setSubmitting(false)
     }
   }
 
@@ -46,47 +55,59 @@ export function AuthButton() {
   }
 
   if (!user) {
-    if (sent) {
+    if (showForm) {
       return (
-        <div className="flex items-center gap-2 px-4 py-2 bg-green-900/30 text-green-300 rounded-lg text-sm">
-          <Mail className="w-4 h-4" />
-          Check your email!
+        <div className="flex flex-col gap-2">
+          <form onSubmit={handleSubmit} className="flex items-center gap-2">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email"
+              className="px-3 py-2 bg-remotion-card border border-remotion-border rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-remotion-blue w-40"
+              autoFocus
+            />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="px-3 py-2 bg-remotion-card border border-remotion-border rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-remotion-blue w-32"
+            />
+            <button
+              type="submit"
+              disabled={submitting || !email || !password}
+              className="px-4 py-2 bg-remotion-blue text-white rounded-lg font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+              {isSignUp ? 'Sign up' : 'Sign in'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="text-gray-500 hover:text-white text-sm"
+            >
+              ✕
+            </button>
+          </form>
+          <div className="flex items-center gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => { setIsSignUp(!isSignUp); setError(''); setSuccess(''); }}
+              className="text-remotion-blue hover:underline"
+            >
+              {isSignUp ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
+            </button>
+            {error && <span className="text-red-400">{error}</span>}
+            {success && <span className="text-green-400">{success}</span>}
+          </div>
         </div>
-      )
-    }
-
-    if (showEmailInput) {
-      return (
-        <form onSubmit={handleSubmit} className="flex items-center gap-2">
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="your@email.com"
-            className="px-3 py-2 bg-remotion-card border border-remotion-border rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-remotion-blue w-48"
-            autoFocus
-          />
-          <button
-            type="submit"
-            disabled={sending || !email}
-            className="px-4 py-2 bg-remotion-blue text-white rounded-lg font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center gap-2"
-          >
-            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowEmailInput(false)}
-            className="text-gray-500 hover:text-white text-sm"
-          >
-            Cancel
-          </button>
-        </form>
       )
     }
 
     return (
       <button
-        onClick={() => setShowEmailInput(true)}
+        onClick={() => setShowForm(true)}
         className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg font-medium hover:bg-gray-100 transition-colors"
       >
         <LogIn className="w-4 h-4" />
