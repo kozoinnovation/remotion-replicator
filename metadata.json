@@ -1,0 +1,4 @@
+{
+  "name": "Remotion Replicator",
+  "description": "Analyze UI animations from video files and generate production-ready Remotion.dev replication specs and code prompts using Gemini 2.0 Pro."
+}
